@@ -22,6 +22,8 @@ func (h *Handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/localhost/healthz", &Handler{})
+	mux.Handle("/healthz", &Handler{})
+	mux.Handle("/", &Handler{})
 
 	if err := http.ListenAndServe(":7878", &Handler{}); err != nil {
 		panic(err)
