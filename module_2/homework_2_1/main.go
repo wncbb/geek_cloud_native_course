@@ -41,14 +41,14 @@ func main() {
 }
 
 func getClientIP(r *http.Request) string {
-	xForwardedForIPs := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
-	if len(xForwardedForIPs) >= 1 && xForwardedForIPs[0] != "" {
-		return xForwardedForIPs[0]
+	xForwardedForIP := strings.Split(strings.TrimSpace(r.Header.Get("X-Forwarded-For")), ",")[0]
+	if xForwardedForIP != "" {
+		return xForwardedForIP
 	}
 
-	xRealIPs := strings.Split(r.Header.Get("X-Real-Ip"), ",")
-	if len(xRealIPs) >= 1 && xRealIPs[0] != "" {
-		return xRealIPs[0]
+	xRealIP := strings.Split(strings.TrimSpace(r.Header.Get("X-Real-Ip")), ",")[0]
+	if xRealIP != "" {
+		return xRealIP
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
