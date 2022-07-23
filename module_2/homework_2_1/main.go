@@ -2,30 +2,60 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 )
 
-type Handler struct{}
+const (
+	EnvVersionKey        = "VERSION"
+	HttpHeaderVersionKey = "VERSION"
+)
 
-func (h *Handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func index(resp http.ResponseWriter, req *http.Request) {
+	os.Setenv(EnvVersionKey, "v0.0.1")
+	resp.Header().Set(HttpHeaderVersionKey, os.Getenv(EnvVersionKey))
+
 	for k, v := range req.Header {
-		resp.Header()[k] = v
+		for _, vv := range v {
+			resp.Header().Add(k, vv)
+		}
 	}
-	resp.Header().Set("x-server-version", os.Getenv("VERSION"))
+
 	resp.WriteHeader(http.StatusOK)
 	resp.Write([]byte(`{"msg":"success", "code":0}`))
 
-	fmt.Printf("Request from %s, Resp status %d\n", req.RemoteAddr, http.StatusOK)
+	fmt.Printf("Request from %s, Resp status %d\n", getClientIP(req), http.StatusOK)
 }
 
 func main() {
 	mux := http.NewServeMux()
-	mux.Handle("/localhost/healthz", &Handler{})
-	mux.Handle("/healthz", &Handler{})
-	mux.Handle("/", &Handler{})
+	mux.HandleFunc("/localhost/healthz", index)
+	mux.HandleFunc("/healthz", index)
+	mux.HandleFunc("/", index)
 
 	if err := http.ListenAndServe(":7878", mux); err != nil {
 		panic(err)
 	}
+}
+
+func getClientIP(r *http.Request) string {
+	xForwardedForIPs := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	if len(xForwardedForIPs) >= 1 && xForwardedForIPs[0] != "" {
+		return xForwardedForIPs[0]
+	}
+
+	xRealIPs := strings.Split(r.Header.Get("X-Real-Ip"), ",")
+	if len(xRealIPs) >= 1 && xRealIPs[0] != "" {
+		return xRealIPs[0]
+	}
+
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// log err
+		return ""
+	}
+
+	return host
 }
