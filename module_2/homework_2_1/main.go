@@ -25,7 +25,7 @@ func main() {
 	mux.Handle("/healthz", &Handler{})
 	mux.Handle("/", &Handler{})
 
-	if err := http.ListenAndServe(":7878", &Handler{}); err != nil {
+	if err := http.ListenAndServe(":7878", mux); err != nil {
 		panic(err)
 	}
 }
