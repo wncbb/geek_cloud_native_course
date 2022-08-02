@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/kr/pretty"
 )
 
 const (
@@ -38,6 +40,7 @@ func main() {
 	if err := http.ListenAndServe(":7878", mux); err != nil {
 		panic(err)
 	}
+	pretty.Println("start")
 }
 
 func getClientIP(r *http.Request) string {
