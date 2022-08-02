@@ -1,4 +1,7 @@
 ```
+
+# use go mod vendor, copy dependencies to local directory
+
 # docker build
 # Create Dockerfile in the directory
 docker build -t wncbb/geektimehttpserverdemo:v0.0.1 .
