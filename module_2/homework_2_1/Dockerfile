@@ -6,7 +6,12 @@ WORKDIR /httpserver
 COPY ./httpserver .
 RUN go mod tidy && go build -o httpserver .
 
-FROM scratch
+# FROM scratch
+FROM docker.io/ubuntu:20.04
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
 COPY --from=builder /httpserver/httpserver /
 EXPOSE 7878
-ENTRYPOINT ["./httpserver"]
+ENTRYPOINT ["/tini", "--"]
+CMD ["./httpserver"]

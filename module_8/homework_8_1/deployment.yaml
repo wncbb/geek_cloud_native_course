@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: name-httpserver
+  labels:
+    app: app-httpserver
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-httpserver
+  template:
+    metadata:
+      labels:
+        app: app-httpserver
+    spec:
+      containers:
+      - name: name-httpserver
+        image: wncbb/httpserver:v0.0.6
+        ports:
+        - containerPort: 7878
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "echo Hello from the postStart handler >> /message.txt"]
+              # command: ["/bin/sh", "-c", "sleep 600s"]
+          preStop:
+            exec: 
+              command: ["/bin/sh", "-c", "echo Hello from the postStart handler >> /message.txt"]
+        env:
+        - name: VERSION 
+          value: v1.0.0
+        volumeMounts:
+        - name: httpserver-company 
+          mountPath: /data/
+          readOnly: true
+        readinessProbe:
+          httpGet: 
+            path: /healthz
+            port: 7878
+            httpHeaders:
+            - name: vesion 
+              value: v0.0.2
+          periodSeconds: 5
+          initialDelaySeconds: 1
+          failureThreshold: 3
+          successThreshold: 1
+        livenessProbe:
+          httpGet: 
+            path: /healthz
+            port: 7878
+            httpHeaders:
+            - name: vesion 
+              value: v0.0.2
+          periodSeconds: 5
+          initialDelaySeconds: 1
+          failureThreshold: 3
+          successThreshold: 1
+        resources:
+          limits:
+            memory: 200Mi
+            cpu: 500m
+          requests:
+            memory: 200Mi
+            cpu: 500m
+      volumes: 
+      - name: httpserver-company
+        configMap: 
+          name: httpserver-company
+
+
+
+    
