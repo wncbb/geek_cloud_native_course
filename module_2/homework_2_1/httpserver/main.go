@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kr/pretty"
+	"go.uber.org/zap"
 )
 
 const (
@@ -29,7 +29,30 @@ type Resp struct {
 	Data    Data
 }
 
+func errorHandle(resp http.ResponseWriter, req *http.Request) {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	r := &Resp{
+		Code: http.StatusInternalServerError,
+		Time: time.Now().UTC(),
+	}
+
+	output, _ := json.Marshal(r)
+
+	resp.WriteHeader(http.StatusInternalServerError)
+	resp.Write([]byte(output))
+
+	logger.Error("Error",
+		zap.String("url", req.URL.Path),
+		zap.String("msg", "err"),
+		zap.String("err", "This is an error"))
+}
+
 func index(resp http.ResponseWriter, req *http.Request) {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
 	version := os.Getenv(EnvVersionKey)
 	resp.Header().Set(HttpHeaderVersionKey, version)
 
@@ -49,7 +72,12 @@ func index(resp http.ResponseWriter, req *http.Request) {
 		r.Code = 500
 		r.Message = err.Error()
 		output, _ := json.Marshal(r)
-		resp.Write([]byte(output))
+		resp.Write(output)
+		logger.Error("Index",
+			zap.String("url", req.URL.Path),
+			zap.String("msg", "oopen /data/company failed"),
+			zap.String("err", err.Error()),
+		)
 		return
 	}
 
@@ -64,13 +92,17 @@ func index(resp http.ResponseWriter, req *http.Request) {
 
 	resp.Write([]byte(output))
 
-	fmt.Printf("Request from %s, Resp status %d\n", getClientIP(req), http.StatusOK)
+	logger.Info("Index",
+		zap.String("ip", getClientIP(req)),
+		zap.Int("status", http.StatusOK),
+	)
 }
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/localhost/healthz", index)
 	mux.HandleFunc("/healthz", index)
+	mux.HandleFunc("/error", errorHandle)
 	mux.HandleFunc("/", index)
 
 	if err := http.ListenAndServe(":7878", mux); err != nil {
