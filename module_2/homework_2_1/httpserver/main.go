@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/kr/pretty"
 	"go.uber.org/zap"
 )
 
@@ -30,9 +32,6 @@ type Resp struct {
 }
 
 func errorHandle(resp http.ResponseWriter, req *http.Request) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
 	r := &Resp{
 		Code: http.StatusInternalServerError,
 		Time: time.Now().UTC(),
@@ -50,9 +49,6 @@ func errorHandle(resp http.ResponseWriter, req *http.Request) {
 }
 
 func index(resp http.ResponseWriter, req *http.Request) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
 	version := os.Getenv(EnvVersionKey)
 	resp.Header().Set(HttpHeaderVersionKey, version)
 
@@ -98,17 +94,42 @@ func index(resp http.ResponseWriter, req *http.Request) {
 	)
 }
 
+var logger *zap.Logger
+
 func main() {
+	logger, _ = zap.NewProduction()
+	defer logger.Sync()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/localhost/healthz", index)
 	mux.HandleFunc("/healthz", index)
 	mux.HandleFunc("/error", errorHandle)
 	mux.HandleFunc("/", index)
 
-	if err := http.ListenAndServe(":7878", mux); err != nil {
-		panic(err)
+	srv := &http.Server{
+		Addr:    ":7878",
+		Handler: mux,
 	}
-	pretty.Println("start")
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("ServerFailed", zap.String("err", err.Error()))
+		}
+		logger.Info("ServerStarted")
+	}()
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	<-done
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		// extra handling here
+		cancel()
+	}()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Fatal("ShutdownFailed", zap.String("err", err.Error()))
+	}
+	logger.Info("ServerExitedProperly")
 }
 
 func getClientIP(r *http.Request) string {

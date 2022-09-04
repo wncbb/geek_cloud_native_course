@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: name-httpserver
-        image: wncbb/httpserver:v0.0.8
+        image: wncbb/httpserver:v0.0.9
         ports:
         - containerPort: 7878
         lifecycle:
@@ -29,7 +29,10 @@ spec:
               command: ["/bin/sh", "-c", "echo Hello from the postStart handler >> /message.txt"]
         env:
         - name: VERSION 
-          value: v1.0.0
+          valueFrom:
+            configMapKeyRef:
+              name: httpserver-company
+              key: version
         volumeMounts:
         - name: httpserver-company 
           mountPath: /data/
@@ -67,6 +70,7 @@ spec:
       - name: httpserver-company
         configMap: 
           name: httpserver-company
+      terminationGracePeriodSeconds: 10
 
 
 

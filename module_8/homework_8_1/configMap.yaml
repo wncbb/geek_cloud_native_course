@@ -4,3 +4,4 @@ metadata:
   name: httpserver-company
 data:
   company: "ABC"
+  version: "v1.0.1"
