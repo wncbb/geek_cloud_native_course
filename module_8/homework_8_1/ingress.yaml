@@ -1,18 +1,22 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: istio
+  generation: 1
   name: ingress-httpserver
 spec:
+  ingressClassName: nginx
   rules:
   - host: httpserver.io
     http:
       paths:
-      - path: "/status"
-        pathType: Prefix
-        backend:
+      - backend:
           service:
-            name:  httpserver
+            name: httpserver
             port:
               number: 80
+        path: /
+        pathType: Prefix
+  tls:
+    - hosts:
+        - httpserver.io
+      secretName: httpserver.io
