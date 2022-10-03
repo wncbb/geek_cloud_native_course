@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"httpserver/metrics"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
@@ -96,15 +100,27 @@ func index(resp http.ResponseWriter, req *http.Request) {
 
 var logger *zap.Logger
 
+func images(resp http.ResponseWriter, req *http.Request) {
+	timer := metrics.NewTimer()
+	defer timer.ObserveTotal()
+	randomInMilliSeconds := rand.Intn(2000)
+	time.Sleep(time.Duration(randomInMilliSeconds) * time.Millisecond)
+	resp.Write([]byte(`{"code":200}`))
+}
+
 func main() {
 	logger, _ = zap.NewProduction()
 	defer logger.Sync()
+	metrics.Register()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/localhost/healthz", index)
 	mux.HandleFunc("/healthz", index)
 	mux.HandleFunc("/error", errorHandle)
 	mux.HandleFunc("/", index)
+	mux.HandleFunc("/images", images)
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{
 		Addr:    ":7878",

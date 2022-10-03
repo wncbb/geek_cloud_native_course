@@ -13,10 +13,13 @@ spec:
     metadata:
       labels:
         app: app-httpserver
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7878"
     spec:
       containers:
       - name: name-httpserver
-        image: wncbb/httpserver:v0.0.9
+        image: wncbb/httpserver:v0.0.10
         ports:
         - containerPort: 7878
         lifecycle:
